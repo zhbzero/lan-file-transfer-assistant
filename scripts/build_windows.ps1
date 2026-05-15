@@ -11,5 +11,12 @@ if (-not (Test-Path $Py)) {
 & $Py (Join-Path $Root "scripts\png_to_ico.py")
 & (Join-Path $Root ".venv\Scripts\pyinstaller.exe") --clean --noconfirm (Join-Path $Root "build_windows.spec")
 
+# PyInstaller 中间产物仅占空间，下次打包会重建；保留 dist 下 exe 即可。
+$BuildDir = Join-Path $Root "build"
+if (Test-Path $BuildDir) {
+    Remove-Item -Recurse -Force $BuildDir
+    Write-Host "已删除中间目录：build\"
+}
+
 Write-Host ""
 Write-Host "打包完成：$(Join-Path $Root 'dist\文件传输助手.exe')"

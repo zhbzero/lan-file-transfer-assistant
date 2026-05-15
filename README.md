@@ -58,7 +58,7 @@ python main.py
    pip install -r requirements-build.txt
    ```
 
-2. （可选）将应用图标命名为 **`图标.png`**，放在**项目根目录**或 **`assets/图标.png`**。打包脚本会自动生成 `dist_assets/app.ico`；若未提供 PNG，会使用内置占位图。
+2. （可选）将应用图标命名为 **`图标.png`**，放在**项目根目录**或 **`assets/图标.png`**。**建议至少 512×512 像素（更佳 1024×1024 或更高）**；过小 PNG 在生成 256×256 图层时会被放大，无法避免发糊。打包脚本会生成多档尺寸 `dist_assets/app.ico`（多步缩放 + 小图微锐化）；若未提供 PNG，会使用内置占位图。
 
 3. 执行一键脚本：
 
@@ -67,6 +67,32 @@ python main.py
    ```
 
    生成的可执行文件：`dist\文件传输助手.exe`（仅此目录下的 exe 为成品，其余打包中间文件无日常用途。）
+
+   更换图标或调整 ICO 后需重新执行上述打包脚本；仅在本机开发机上操作即可。
+
+## 分发到其他电脑
+
+图标在打包时已**写入 exe 内部**（多档尺寸，适配 Win10/11 桌面与资源管理器）。因此：
+
+| 场景 | 是否需要额外处理 |
+|------|------------------|
+| 把 **`dist\文件传输助手.exe`** 复制到别的 Windows 电脑直接运行 | **一般不需要**。对方不用装 Python，也不用带 `图标.png`、`app.ico` 或执行打包脚本。 |
+| 图标是否清晰 | 与你在本机看到的新版 exe **一致**（前提是对方用的是**本次打包后的 exe**，不是旧文件）。 |
+| 对方电脑仍显示旧/糊图标 | 多为**旧快捷方式**或**本机图标缓存**仍指向旧图。删掉旧快捷方式，对新 exe **重新「发送到桌面快捷方式」** 即可；仍异常时再按下文「刷新图标缓存」处理。 |
+
+**不要在其他电脑上**单独跑 `png_to_ico.py` 或 `build_windows.ps1` 来「修复图标」——那是在开发机上生成 exe 用的；使用者只需拿到最新 exe。
+
+### 刷新图标缓存（仅当图标已更新却仍发糊时）
+
+多见于**同一台电脑、同一路径**反复覆盖旧 exe，或桌面快捷方式未重建。在**该电脑**的 PowerShell 中执行：
+
+```powershell
+Stop-Process -Name explorer -Force
+Remove-Item "$env:LOCALAPPDATA\Microsoft\Windows\Explorer\iconcache*" -Force -ErrorAction SilentlyContinue
+Start-Process explorer
+```
+
+然后删除旧快捷方式，从新 exe 再创建快捷方式。
 
 ## 安全提示
 
