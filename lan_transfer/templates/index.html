@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>内网文件传输</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>内网文件传输</h1>
+
+      <div class="card">
+        <div class="row toolbar">
+          <div class="row">
+            <input type="file" id="fileInput" class="hidden" multiple />
+            <button type="button" class="btn secondary" id="pickBtn">上传文件</button>
+            <button type="button" class="btn secondary" id="refreshListBtn">重新加载</button>
+          </div>
+          <span class="small">选择后立即上传到上方路径对应的当前文件夹。</span>
+        </div>
+        <div class="crumbs" id="crumbs"></div>
+        <table>
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>大小</th>
+              <th>修改时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="listBody"></tbody>
+        </table>
+        <div class="status" id="listStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size: 1.05rem; margin: 0 0 10px">文字传输（局域网共享剪贴板）</h2>
+        <p class="small" style="margin: 0 0 10px">
+          任意设备在此粘贴或编辑后点保存，其它设备刷新或点加载即可同步。
+        </p>
+        <textarea class="clip" id="clipArea" placeholder="在此输入或粘贴文字…"></textarea>
+        <div class="row" style="margin-top: 10px">
+          <button type="button" class="btn" id="saveTextBtn">保存文字</button>
+          <button type="button" class="btn secondary" id="loadTextBtn">重新加载</button>
+        </div>
+        <div class="status" id="textStatus"></div>
+      </div>
+    </div>
+
+    <script>
+      let currentPath = "";
+
+      const crumbsEl = document.getElementById("crumbs");
+      const listBody = document.getElementById("listBody");
+      const listStatus = document.getElementById("listStatus");
+      const textStatus = document.getElementById("textStatus");
+      const fileInput = document.getElementById("fileInput");
+      const pickBtn = document.getElementById("pickBtn");
+      const clipArea = document.getElementById("clipArea");
+
+      function setStatus(el, msg, isErr) {
+        el.textContent = msg || "";
+        el.classList.toggle("err", !!isErr);
+      }
+
+      function formatSize(n) {
+        if (n == null) return "—";
+        if (n < 1024) return n + " B";
+        if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+        return (n / (1024 * 1024)).toFixed(1) + " MB";
+      }
+
+      function renderCrumbs(data) {
+        crumbsEl.innerHTML = "";
+        (data.breadcrumbs || []).forEach((c, i, arr) => {
+          if (i > 0) crumbsEl.appendChild(document.createTextNode(" / "));
+          const a = document.createElement("a");
+          a.href = "#";
+          a.textContent = c.name;
+          a.addEventListener("click", (e) => {
+            e.preventDefault();
+            navigate(c.path);
+          });
+          crumbsEl.appendChild(a);
+        });
+      }
+
+      async function navigate(path) {
+        currentPath = path || "";
+        await refreshList();
+      }
+
+      async function refreshList() {
+        setStatus(listStatus, "加载中…", false);
+        listBody.innerHTML = "";
+        const q = new URLSearchParams();
+        if (currentPath) q.set("path", currentPath);
+        let res;
+        try {
+          res = await fetch("/api/list?" + q.toString());
+        } catch (e) {
+          setStatus(listStatus, "网络错误：" + e, true);
+          return;
+        }
+        const data = await res.json();
+        if (!res.ok) {
+          setStatus(listStatus, data.error || "加载失败", true);
+          return;
+        }
+        setStatus(listStatus, "", false);
+        renderCrumbs(data);
+        for (const it of data.items || []) {
+          const tr = document.createElement("tr");
+          const tdName = document.createElement("td");
+          tdName.textContent = it.name;
+          tdName.className = "name-cell" + (it.is_dir ? " dir" : "");
+          tdName.addEventListener("click", () => {
+            if (it.is_dir) {
+              const next =
+                currentPath === ""
+                  ? it.name
+                  : currentPath.replace(/\/+$/, "") + "/" + it.name;
+              navigate(next);
+            }
+          });
+
+          const tdSize = document.createElement("td");
+          tdSize.textContent = it.is_dir ? "文件夹" : formatSize(it.size);
+
+          const tdTime = document.createElement("td");
+          tdTime.textContent = it.mtime || "";
+
+          const tdOp = document.createElement("td");
+          if (!it.is_dir) {
+            const dl = document.createElement("a");
+            dl.textContent = "下载";
+            dl.className = "btn secondary";
+            dl.style.display = "inline-block";
+            dl.style.textDecoration = "none";
+            const qp = new URLSearchParams();
+            qp.set(
+              "path",
+              currentPath === "" ? it.name : currentPath + "/" + it.name
+            );
+            dl.href = "/api/download?" + qp.toString();
+            tdOp.appendChild(dl);
+          } else {
+            const enter = document.createElement("button");
+            enter.type = "button";
+            enter.className = "btn secondary";
+            enter.textContent = "进入";
+            enter.addEventListener("click", () => {
+              const next =
+                currentPath === ""
+                  ? it.name
+                  : currentPath.replace(/\/+$/, "") + "/" + it.name;
+              navigate(next);
+            });
+            tdOp.appendChild(enter);
+          }
+
+          const del = document.createElement("button");
+          del.type = "button";
+          del.className = "btn danger";
+          del.style.marginLeft = "8px";
+          del.textContent = "删除";
+          del.addEventListener("click", async () => {
+            const msg = it.is_dir
+              ? "确定删除文件夹「" + it.name + "」及其中的全部内容？"
+              : "确定删除「" + it.name + "」？";
+            if (!confirm(msg)) return;
+            const rel =
+              currentPath === "" ? it.name : currentPath + "/" + it.name;
+            const r = await fetch("/api/delete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ path: rel }),
+            });
+            const j = await r.json();
+            if (!r.ok) {
+              alert(j.error || "删除失败");
+              return;
+            }
+            await refreshList();
+          });
+          tdOp.appendChild(del);
+
+          tr.appendChild(tdName);
+          tr.appendChild(tdSize);
+          tr.appendChild(tdTime);
+          tr.appendChild(tdOp);
+          listBody.appendChild(tr);
+        }
+      }
+
+      pickBtn.addEventListener("click", () => fileInput.click());
+      document.getElementById("refreshListBtn").addEventListener("click", () => refreshList());
+
+      /** 选完文件后立即上传（无需再点第二步）。 */
+      fileInput.addEventListener("change", async () => {
+        if (!fileInput.files || !fileInput.files.length) return;
+        const fd = new FormData();
+        fd.append("path", currentPath);
+        for (const f of fileInput.files) fd.append("file", f);
+        setStatus(listStatus, "上传中…", false);
+        let res;
+        try {
+          res = await fetch("/api/upload", { method: "POST", body: fd });
+        } catch (e) {
+          fileInput.value = "";
+          setStatus(listStatus, "网络错误：" + e, true);
+          return;
+        }
+        const data = await res.json();
+        fileInput.value = "";
+        if (!res.ok) {
+          setStatus(listStatus, data.error || "上传失败", true);
+          return;
+        }
+        let msg = "已上传 " + data.saved + " 个文件";
+        if (data.errors && data.errors.length) msg += "；部分失败：" + data.errors.join("; ");
+        setStatus(listStatus, msg, !!(data.errors && data.errors.length));
+        await refreshList();
+      });
+
+      async function loadSharedText() {
+        setStatus(textStatus, "加载文字…", false);
+        const res = await fetch("/api/text");
+        const data = await res.json();
+        if (!res.ok) {
+          setStatus(textStatus, data.error || "加载失败", true);
+          return;
+        }
+        clipArea.value = data.text || "";
+        setStatus(textStatus, "", false);
+      }
+
+      document.getElementById("saveTextBtn").addEventListener("click", async () => {
+        const res = await fetch("/api/text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: clipArea.value }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setStatus(textStatus, data.error || "保存失败", true);
+          return;
+        }
+        setStatus(textStatus, "已保存", false);
+      });
+
+      document.getElementById("loadTextBtn").addEventListener("click", loadSharedText);
+
+      refreshList();
+      loadSharedText();
+    </script>
+  </body>
+</html>

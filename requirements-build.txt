@@ -1,0 +1,2 @@
+# 打包专用（开发机执行 pip install -r requirements-build.txt）
+pyinstaller>=6.3,<7

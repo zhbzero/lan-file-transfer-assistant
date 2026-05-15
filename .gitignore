@@ -1,0 +1,21 @@
+# 构建产物
+/build/
+/dist/
+*.spec.bak
+
+# 打包生成的图标（可由脚本从 图标.png 重新生成）
+/dist_assets/app.ico
+/dist_assets/_placeholder_icon.png
+
+# Python / 环境
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.egg-info/
+.eggs/
+
+# IDE（可按需删除）
+.idea/
