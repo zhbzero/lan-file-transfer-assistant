@@ -1,8 +1,21 @@
-"""路径安全：禁止跳出共享根目录。"""
+"""路径安全与程序目录解析。"""
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+
+def app_base_dir() -> Path:
+    """程序所在目录：打包后为 exe 所在文件夹，开发时为项目根目录。"""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[1]
+
+
+def default_share_root() -> Path:
+    """默认共享文件夹（与程序同目录下的「内网传输共享」）。"""
+    return app_base_dir() / "内网传输共享"
 
 
 def safe_resolve_under_root(root: Path, relative: str) -> Path | None:

@@ -31,6 +31,17 @@ h1 {
   margin: 0 0 16px;
 }
 
+.retention-notice {
+  margin: -8px 0 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -150,13 +161,50 @@ tr:hover td {
 
 textarea.clip {
   width: 100%;
-  min-height: 140px;
+  min-height: 280px;
+  max-height: 520px;
   padding: 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
   font-family: ui-monospace, Consolas, monospace;
   font-size: 0.9rem;
+  line-height: 1.5;
   resize: vertical;
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.upload-progress {
+  margin: 12px 0 4px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+}
+
+.upload-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  transition: width 0.15s ease;
 }
 
 .hidden {

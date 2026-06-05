@@ -46,7 +46,7 @@ python main.py
 
 ## 配置说明
 
-- 默认共享目录：`文档\内网传输共享`（若不存在会尝试创建）。
+- 默认共享目录：与程序同目录下的 `内网传输共享`（exe 旁或开发时项目根下；若不存在会尝试创建）。
 - 配置持久化路径：`%APPDATA%\LANTransferAssistant\config.json`（Windows）。
 - 单次上传总体积上限：约 **512MB**（可在 `lan_transfer/server.py` 中调整 `MAX_CONTENT_LENGTH`）。
 

@@ -15,7 +15,9 @@ from PIL import Image, ImageTk
 
 import qrcode
 
+from lan_transfer.expiry import RETENTION_NOTICE
 from lan_transfer.network import get_lan_ipv4_candidates, pick_primary_lan_ip
+from lan_transfer.paths import app_base_dir, default_share_root
 from lan_transfer.server import ServerThread, create_app
 from lan_transfer.state import TransferState
 
@@ -52,11 +54,9 @@ class TransferAssistantGUI(tk.Tk):
         self._start_server_safe(initial=True)
 
     def _load_config_into_state(self) -> None:
-        """从配置文件恢复目录与端口；若无配置则创建默认共享目录。"""
-        root_default = Path.home() / "Documents" / "内网传输共享"
-        port_default = 5000
-        root_path = root_default
-        port = port_default
+        """从配置文件恢复目录与端口；若无配置则使用程序目录下的默认共享文件夹。"""
+        root_path = default_share_root()
+        port = 5000
         try:
             if self._cfg_file.is_file():
                 raw = json.loads(self._cfg_file.read_text(encoding="utf-8"))
@@ -70,7 +70,7 @@ class TransferAssistantGUI(tk.Tk):
         try:
             root_path.mkdir(parents=True, exist_ok=True)
         except OSError:
-            root_path = Path.home() / "Documents"
+            root_path = app_base_dir()
         self.state.set_root_dir(root_path)
         self.folder_var.set(str(self.state.get_root_dir()))
         self.port_var.set(str(port))
@@ -107,6 +107,14 @@ class TransferAssistantGUI(tk.Tk):
 
         hint = ttk.Label(self, text="扫描二维码或在局域网内浏览器访问下方链接：")
         hint.pack(anchor="w", **pad)
+
+        retention = ttk.Label(
+            self,
+            text=RETENTION_NOTICE,
+            foreground="#9a3412",
+            wraplength=480,
+        )
+        retention.pack(anchor="w", padx=12, pady=(0, 8))
 
         self.qr_label = ttk.Label(self)
         self.qr_label.pack(pady=(4, 8))
@@ -164,7 +172,9 @@ class TransferAssistantGUI(tk.Tk):
         return None
 
     def _browse_folder(self) -> None:
-        path = filedialog.askdirectory(initialdir=self.folder_var.get() or str(Path.home()))
+        path = filedialog.askdirectory(
+            initialdir=self.folder_var.get() or str(default_share_root().parent)
+        )
         if path:
             self.folder_var.set(path)
 

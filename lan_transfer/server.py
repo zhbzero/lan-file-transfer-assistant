@@ -11,6 +11,7 @@ from pathlib import Path
 from flask import Flask, abort, jsonify, render_template, request, send_from_directory
 from werkzeug.utils import secure_filename
 
+from lan_transfer.expiry import RETENTION_NOTICE, relative_to_root
 from lan_transfer.paths import safe_resolve_under_root
 from lan_transfer.state import TransferState
 
@@ -27,10 +28,11 @@ def create_app(state: TransferState) -> Flask:
 
     @app.route("/")
     def index():
-        return render_template("index.html")
+        return render_template("index.html", retention_notice=RETENTION_NOTICE)
 
     @app.route("/api/list")
     def api_list():
+        state.purge_expired()
         root = state.get_root_dir()
         rel = request.args.get("path", "").strip().replace("\\", "/")
         target = safe_resolve_under_root(root, rel)
@@ -39,6 +41,8 @@ def create_app(state: TransferState) -> Flask:
         items = []
         try:
             for entry in sorted(target.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
+                if entry.name.startswith("."):
+                    continue
                 try:
                     st = entry.stat()
                     items.append(
@@ -58,8 +62,11 @@ def create_app(state: TransferState) -> Flask:
 
     @app.route("/api/download")
     def api_download():
+        state.purge_expired()
         root = state.get_root_dir()
         rel = request.args.get("path", "").strip().replace("\\", "/")
+        if state.is_file_expired(rel):
+            abort(404)
         full = safe_resolve_under_root(root, rel)
         if full is None or not full.is_file():
             abort(404)
@@ -89,6 +96,7 @@ def create_app(state: TransferState) -> Flask:
             target = dest_dir / name
             try:
                 f.save(str(target))
+                state.schedule_file_expiry(relative_to_root(root, target))
                 saved += 1
             except OSError as e:
                 errors.append(f"{name}: {e}")
@@ -113,12 +121,14 @@ def create_app(state: TransferState) -> Flask:
                 shutil.rmtree(full)
             else:
                 return jsonify({"error": "路径不存在"}), 404
+            state.unschedule_path(rel)
         except OSError as e:
             return jsonify({"error": str(e)}), 400
         return jsonify({"ok": True})
 
     @app.route("/api/text", methods=["GET"])
     def api_text_get():
+        state.purge_expired()
         return jsonify({"text": state.shared_text, "updated_at": state.text_updated_at})
 
     @app.route("/api/text", methods=["POST"])
@@ -129,8 +139,7 @@ def create_app(state: TransferState) -> Flask:
             return jsonify({"error": "缺少 text 字段"}), 400
         if not isinstance(text, str):
             return jsonify({"error": "text 须为字符串"}), 400
-        state.shared_text = text
-        state.touch_text()
+        state.set_shared_text(text)
         return jsonify({"ok": True})
 
     return app
