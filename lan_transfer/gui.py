@@ -15,7 +15,7 @@ from PIL import Image, ImageTk
 
 import qrcode
 
-from lan_transfer.expiry import RETENTION_NOTICE
+from lan_transfer.expiry import MAX_UPLOAD_NOTICE, RETENTION_NOTICE
 from lan_transfer.network import get_lan_ipv4_candidates, pick_primary_lan_ip
 from lan_transfer.paths import app_base_dir, default_share_root
 from lan_transfer.server import ServerThread, create_app
@@ -114,7 +114,15 @@ class TransferAssistantGUI(tk.Tk):
             foreground="#9a3412",
             wraplength=480,
         )
-        retention.pack(anchor="w", padx=12, pady=(0, 8))
+        retention.pack(anchor="w", padx=12, pady=(0, 4))
+
+        upload_limit = ttk.Label(
+            self,
+            text=MAX_UPLOAD_NOTICE,
+            foreground="#1e40af",
+            wraplength=480,
+        )
+        upload_limit.pack(anchor="w", padx=12, pady=(0, 8))
 
         self.qr_label = ttk.Label(self)
         self.qr_label.pack(pady=(4, 8))

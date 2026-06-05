@@ -10,6 +10,7 @@
     <div class="wrap">
       <h1>内网文件传输</h1>
       <p class="retention-notice">{{ retention_notice }}</p>
+      <p class="retention-notice upload-limit-notice">{{ max_upload_notice }}</p>
 
       <div class="card">
         <div class="row toolbar">
@@ -18,7 +19,7 @@
             <button type="button" class="btn secondary" id="pickBtn">上传文件</button>
             <button type="button" class="btn secondary" id="refreshListBtn">刷新加载</button>
           </div>
-          <span class="small">选择后立即上传到上方路径对应的当前文件夹。</span>
+          <span class="small">选择后立即上传到当前文件夹。{{ max_upload_notice }}</span>
         </div>
         <div class="upload-progress hidden" id="uploadProgress" aria-live="polite">
           <div class="upload-progress-head">
@@ -62,6 +63,8 @@
 
     <script>
       let currentPath = "";
+      const MAX_UPLOAD_BYTES = {{ max_upload_bytes }};
+      const MAX_UPLOAD_NOTICE = {{ max_upload_notice | tojson }};
 
       const crumbsEl = document.getElementById("crumbs");
       const listBody = document.getElementById("listBody");
@@ -144,6 +147,8 @@
             }
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve(data);
+            } else if (xhr.status === 413) {
+              reject(new Error(MAX_UPLOAD_NOTICE));
             } else {
               reject(new Error(data.error || "上传失败"));
             }
@@ -287,6 +292,12 @@
       fileInput.addEventListener("change", async () => {
         if (!fileInput.files || !fileInput.files.length) return;
         const files = Array.from(fileInput.files);
+        const totalSize = files.reduce((s, f) => s + f.size, 0);
+        if (totalSize > MAX_UPLOAD_BYTES) {
+          fileInput.value = "";
+          setStatus(listStatus, MAX_UPLOAD_NOTICE, true);
+          return;
+        }
         pickBtn.disabled = true;
         showUploadProgress(true);
         updateUploadProgress(0, files.reduce((s, f) => s + f.size, 0), Date.now(), files.length);

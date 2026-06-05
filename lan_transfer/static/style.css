@@ -42,6 +42,13 @@ h1 {
   line-height: 1.5;
 }
 
+.upload-limit-notice {
+  margin-top: -8px;
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);

@@ -11,7 +11,12 @@ from pathlib import Path
 from flask import Flask, abort, jsonify, render_template, request, send_from_directory
 from werkzeug.utils import secure_filename
 
-from lan_transfer.expiry import RETENTION_NOTICE, relative_to_root
+from lan_transfer.expiry import (
+    MAX_UPLOAD_BYTES,
+    MAX_UPLOAD_NOTICE,
+    RETENTION_NOTICE,
+    relative_to_root,
+)
 from lan_transfer.paths import safe_resolve_under_root
 from lan_transfer.state import TransferState
 
@@ -24,11 +29,20 @@ def create_app(state: TransferState) -> Flask:
         static_folder=str(pkg_dir / "static"),
     )
     # 单次请求体上限（多文件上传时总和）
-    app.config["MAX_CONTENT_LENGTH"] = 512 * 1024 * 1024
+    app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+
+    @app.errorhandler(413)
+    def request_entity_too_large(_e):
+        return jsonify({"error": MAX_UPLOAD_NOTICE}), 413
 
     @app.route("/")
     def index():
-        return render_template("index.html", retention_notice=RETENTION_NOTICE)
+        return render_template(
+            "index.html",
+            retention_notice=RETENTION_NOTICE,
+            max_upload_notice=MAX_UPLOAD_NOTICE,
+            max_upload_bytes=MAX_UPLOAD_BYTES,
+        )
 
     @app.route("/api/list")
     def api_list():
