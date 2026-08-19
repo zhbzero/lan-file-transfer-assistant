@@ -10,6 +10,8 @@
 # Python / 环境
 .venv/
 venv/
+linux-deploy/.venv/
+linux-deploy/env
 __pycache__/
 *.py[cod]
 *$py.class

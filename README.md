@@ -117,11 +117,16 @@ scripts/
 build_windows.spec      # PyInstaller 配置
 requirements.txt        # 运行时依赖
 requirements-build.txt  # 打包依赖
+linux-deploy/           # Ubuntu 无界面部署（gunicorn + systemd）
 ```
 
 ## 开源协议
 
 MIT License，见仓库根目录 [`LICENSE`](LICENSE)。
+
+## Linux / Ubuntu 服务器部署
+
+Windows 桌面版见上文。若要在 Linux 上以无界面服务运行，见独立目录 [`linux-deploy/`](linux-deploy/README.md)（gunicorn + systemd，不依赖 Tkinter）。把该目录拷到目标机器后执行 `install.sh` 即可。
 
 ## 致谢
 
